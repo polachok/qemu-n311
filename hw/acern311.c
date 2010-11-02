@@ -21,6 +21,7 @@
 #include "sd.h"
 #include "dm9000.h"
 #include "eeprom24c0x.h"
+#include "framebuffer.h"
 
 #define acern311_printf(format, ...)	\
     fprintf(stderr, "QEMU %s: " format, __FUNCTION__, ##__VA_ARGS__)
@@ -43,6 +44,13 @@ struct acern311_board_s {
     SDState * mmc;
     NANDFlashState *nand;
     int bl_level;
+};
+
+typedef void (*s3c_drawfn_t)(uint32_t *, uint8_t *, const uint8_t *, int, int);
+struct n311fb_s {
+    s3c_drawfn_t *line_fn;
+    s3c_drawfn_t fn;
+    int dest_width;
 };
 
 /*
@@ -353,6 +361,80 @@ static struct acern311_board_s *acern311_init_common(int ram_size,
     return s;
 }
 
+static void n311fb_update_display(void *opaque)
+{
+	printf("HI THERE\n");
+}
+
+static void n311fb_invalidate_display(void *opaque)
+{
+	/* TODO */
+}
+
+static void n311fb_screen_dump(void *opaque, const char *filename)
+{
+    /* TODO */
+}
+
+static void n311fb_write(void *opaque, target_phys_addr_t addr,
+                uint32_t value) {
+	printf("OLOLOLO\n");
+}
+
+static uint32_t n311fb_read(void *opaque, target_phys_addr_t addr) 
+{
+	return 0;
+}
+
+static CPUWriteMemoryFunc *n311fb_writefn[] = {
+    n311fb_write,
+    n311fb_write,
+    n311fb_write,
+};
+
+static CPUWriteMemoryFunc *n311fb_readfn[] = {
+    n311fb_read,
+    n311fb_read,
+    n311fb_read,
+};
+
+struct n311fb_s *n311fb_init(target_phys_addr_t base,
+		qemu_irq irq)
+{
+    int iomemtype;
+    struct n311fb_s *s = (struct n311fb_s *)
+            qemu_mallocz(sizeof(struct n311fb_s));
+#if 0
+    s->base = base;
+    s->irq = irq;
+
+    s->ds =
+#endif
+	    graphic_console_init(
+    				n311fb_update_display,
+                    n311fb_invalidate_display,
+                    n311fb_screen_dump, NULL, s);
+
+    iomemtype = cpu_register_io_memory(0, n311fb_readfn,
+                    n311fb_writefn, s);
+    cpu_register_physical_memory(base, 0x96000, iomemtype);
+#if 0
+    switch (ds_get_bits_per_pixel(s->ds)) {
+    case 24:
+        s->line_fn = n311_draw_fn_24;
+        s->dest_width = 3;
+        break;
+    case 32:
+        s->line_fn = n311_draw_fn_32;
+        s->dest_width = 4;
+        break;
+    default:
+        fprintf(stderr, "%s: Bad color depth\n", __FUNCTION__);
+        exit(1);
+    }
+#endif
+    return s;
+}
 
 static void acern311_init(ram_addr_t ram_size,
         const char *boot_device,
@@ -373,7 +455,9 @@ static void acern311_init(ram_addr_t ram_size,
 
 	mini->nand = nand_init(NAND_MFR_SAMSUNG, 0x76);
     mini->cpu->nand->reg(mini->cpu->nand, mini->nand);
-
+    //sysbus_create_simple("acern311,fb", 0x20020000, NULL);
+    //sysbus_register_dev("acern311,fb", NULL, n311fb_init);
+    n311fb_init(0x20020000, NULL);
     acern311_reset(mini);
 }
 

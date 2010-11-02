@@ -134,4 +134,6 @@ extern QEMUMachine mini2440_machine;
 /* syborg.c */
 extern QEMUMachine syborg_machine;
 
+/* mini2440.c */
+extern QEMUMachine acern311_machine;
 #endif

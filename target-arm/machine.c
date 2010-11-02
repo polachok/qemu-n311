@@ -25,6 +25,7 @@ void register_machines(void)
     qemu_register_machine(&tosapda_machine);
     qemu_register_machine(&mini2440_machine);
     qemu_register_machine(&syborg_machine);
+    qemu_register_machine(&acern311_machine);
 }
 
 void cpu_save(QEMUFile *f, void *opaque)

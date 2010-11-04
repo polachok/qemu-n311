@@ -2741,7 +2741,7 @@ static void s3c2410_reset(void *opaque)
     s3c_pic_reset(s->pic);
     s3c_dma_reset(s->dma);
     s3c_gpio_reset(s->io);
-    s3c_lcd_reset(s->lcd);
+    //s3c_lcd_reset(s->lcd);
     s3c_timers_reset(s->timers);
     s3c_mmci_reset(s->mmci);
     s3c_adc_reset(s->adc);
@@ -2814,7 +2814,7 @@ struct s3c_state_s *s3c24xx_init(
     register_savevm("s3c24xx_clkpwr", 0, 0,
                     s3c_clkpwr_save, s3c_clkpwr_load, s);
 
-    s->lcd = s3c_lcd_init(0x4d000000, s->irq[S3C_PIC_LCD]);
+    //s->lcd = s3c_lcd_init(0x4d000000, s->irq[S3C_PIC_LCD]);
 
     if (s->cpu_id == S3C_CPU_2440)
     	s->nand = s3c2440_nand_init();

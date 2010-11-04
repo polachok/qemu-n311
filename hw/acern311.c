@@ -46,12 +46,16 @@ struct acern311_board_s {
     int bl_level;
 };
 
-typedef void (*s3c_drawfn_t)(uint32_t *, uint8_t *, const uint8_t *, int, int);
 struct n311fb_s {
-    s3c_drawfn_t *line_fn;
-    s3c_drawfn_t fn;
+    target_phys_addr_t base;
+    //s3c_drawfn_t *line_fn;
+    drawfn *fn;
     int dest_width;
+    DisplayState *ds;
+    uint32_t palette[256];
 };
+
+struct n311fb_s *n311fb_init(target_phys_addr_t base, qemu_irq irq);
 
 /*
  * the 24c08 sits on 4 addresses on the bus, and uses the lower address bits
@@ -363,7 +367,8 @@ static struct acern311_board_s *acern311_init_common(int ram_size,
 
 static void n311fb_update_display(void *opaque)
 {
-	printf("HI THERE\n");
+	struct n311fb_s *s = opaque;
+        dpy_update(s->ds, 0, 0, 480, 640);
 }
 
 static void n311fb_invalidate_display(void *opaque)
@@ -378,7 +383,25 @@ static void n311fb_screen_dump(void *opaque, const char *filename)
 
 static void n311fb_write(void *opaque, target_phys_addr_t addr,
                 uint32_t value) {
-	printf("OLOLOLO\n");
+        uint8_t *dest;
+	struct n311fb_s *s = opaque;
+	uint16_t p1, p2;
+	int p;
+	p1 = value;
+	p2 = value >> 16;
+	p = 4*(addr/2);
+
+	dest = ds_get_data(s->ds);
+
+	dest[p++] = ((p1 & 0x001f)<<3); // red
+	dest[p++] = ((p1 & 0x07e0)>>3); // green
+	dest[p++] = ((p1 & 0xf800)>>8); // blue
+	dest[p++] = 0;
+
+	dest[p++] = ((p2 & 0x001f)<<3); // red
+	dest[p++] = ((p2 & 0x07e0)>>3); // green
+	dest[p++] = ((p2 & 0xf800)>>8); // blue
+	dest[p++] = 0;
 }
 
 static uint32_t n311fb_read(void *opaque, target_phys_addr_t addr) 
@@ -392,7 +415,7 @@ static CPUWriteMemoryFunc *n311fb_writefn[] = {
     n311fb_write,
 };
 
-static CPUWriteMemoryFunc *n311fb_readfn[] = {
+static CPUReadMemoryFunc *n311fb_readfn[] = {
     n311fb_read,
     n311fb_read,
     n311fb_read,
@@ -402,15 +425,18 @@ struct n311fb_s *n311fb_init(target_phys_addr_t base,
 		qemu_irq irq)
 {
     int iomemtype;
+    int i;
     struct n311fb_s *s = (struct n311fb_s *)
             qemu_mallocz(sizeof(struct n311fb_s));
-#if 0
     s->base = base;
+    for(i = 0; i < 256 ; i++) {
+	    s->palette[i] = 0xffff;
+    }
+#if 0
     s->irq = irq;
 
-    s->ds =
 #endif
-	    graphic_console_init(
+    s->ds = graphic_console_init(
     				n311fb_update_display,
                     n311fb_invalidate_display,
                     n311fb_screen_dump, NULL, s);
@@ -418,6 +444,7 @@ struct n311fb_s *n311fb_init(target_phys_addr_t base,
     iomemtype = cpu_register_io_memory(0, n311fb_readfn,
                     n311fb_writefn, s);
     cpu_register_physical_memory(base, 0x96000, iomemtype);
+    qemu_console_resize(s->ds, 480, 640);
 #if 0
     switch (ds_get_bits_per_pixel(s->ds)) {
     case 24:
